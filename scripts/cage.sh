@@ -95,6 +95,24 @@ RUN_ARGS=(
     -v "$PWD:/workspace"
 )
 
+# Worktree support: .git is a file pointing to the main repo's
+# gitdir, which won't resolve inside the container.  Mount the real
+# .git directory and overlay /workspace/.git with a tmpfs so the
+# entrypoint can copy it into place without touching the host.
+if [[ -f "$PWD/.git" ]]; then
+    gitdir_ref=$(cat "$PWD/.git")
+    gitdir_ref="${gitdir_ref#gitdir: }"
+    [[ "$gitdir_ref" != /* ]] && gitdir_ref="$PWD/$gitdir_ref"
+    gitdir_ref=$(cd "$gitdir_ref" && pwd)
+    main_git_dir=$(cd "$gitdir_ref" && cd "$(cat "$gitdir_ref/commondir")" && pwd)
+    worktree_name=$(basename "$gitdir_ref")
+    RUN_ARGS+=(
+        -v "$main_git_dir:/tmp/.host-git-dir:ro"
+        --mount "type=tmpfs,destination=/workspace/.git"
+        -e "CAGE_WORKTREE=$worktree_name"
+    )
+fi
+
 # Ports
 for port in $CAGE_PORTS; do
     RUN_ARGS+=(-p "$port:$port")
