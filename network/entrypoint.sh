@@ -20,6 +20,9 @@ if [[ -n "${CAGE_WORKTREE:-}" && -d "/tmp/.host-git-dir" ]]; then
     fi
 fi
 
+# Fix ownership on home directory (named volumes may be created as root)
+sudo chown -R cage:cage /home/cage
+
 # Fix ownership on cached dir volumes (Docker creates them as root)
 if [[ -n "${CAGE_CACHED_DIRS:-}" ]]; then
     for dir in $CAGE_CACHED_DIRS; do
